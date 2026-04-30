@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrepMind AI | Personalized Exam Mastery</title>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #06060a;
+            --card: #12121a;
+            --accent: #e8ff5a;
+            --text: #ffffff;
+            --text-dim: #a0a0ab;
+            --border: #27272a;
+            --error: #ff5a5a;
+            --success: #5affa3;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Instrument Sans', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3 { font-family: sans-serif; font-weight: 700; letter-spacing: -0.02em; }
+
+        .hidden { display: none !important; }
+
+        /* --- Landing Page --- */
+        #landing-page {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .hero-title { font-size: 3.5rem; margin-bottom: 1rem; color: var(--accent); }
+        .hero-subtitle { color: var(--text-dim); margin-bottom: 2rem; max-width: 500px; }
+
+        .input-group {
+            background: var(--card);
+            padding: 8px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            display: flex;
+            width: 100%;
+            max-width: 500px;
+            transition: border-color 0.3s;
+        }
+
+        .input-group:focus-within { border-color: var(--accent); }
+
+        input {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 12px 20px;
+            flex-grow: 1;
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .btn-main {
+            background: var(--accent);
+            color: black;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .btn-main:hover { transform: scale(1.02); }
+
+        /* --- API Key Config --- */
+        .api-config { position: fixed; top: 20px; right: 20px; z-index: 100; }
+        .api-config input { background: var(--card); border: 1px solid var(--border); border-radius: 8px; font-size: 0.8rem; width: 150px; }
+
+        /* --- Loading Screen --- */
+        #loading-screen {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: var(--bg);
+        }
+
+        .loader-step {
+            margin: 10px 0;
+            color: var(--text-dim);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s;
+        }
+
+        .loader-step.active { opacity: 1; transform: translateY(0); color: var(--accent); }
+
+        /* --- Dashboard --- */
+        #dashboard { display: grid; grid-template-columns: 250px 1fr; height: 100vh; }
+
+        nav {
+            background: var(--card);
+            border-right: 1px solid var(--border);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .nav-item {
+            padding: 12px 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            color: var(--text-dim);
+            transition: 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: rgba(232, 255, 90, 0.1);
+            color: var(--accent);
+        }
+
+        main { padding: 40px; overflow-y: auto; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border);
+            border-radius: 100px;
+            margin: 4px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .chip:hover { border-color: var(--accent); }
+
+        /* Practice UI */
+        .option {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .option.correct { background: rgba(90, 255, 163, 0.2); border-color: var(--success); }
+        .option.wrong { background: rgba(255, 90, 90, 0.2); border-color: var(--error); }
+
+        /* Chat UI */
+        .chat-box { height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; padding-right: 10px; }
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 15px; }
+        .msg.user { align-self: flex-end; background: var(--accent); color: black; }
+        .msg.ai { align-self: flex-start; background: rgba(255,255,255,0.05); border: 1px solid var(--border); }
+
+        @media (max-width: 768px) {
+            #dashboard { grid-template-columns: 1fr; }
+            nav { display: none; } /* Mobile simplified for demo */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="api-config">
+        <input type="password" id="api-key" placeholder="Enter Claude API Key">
+    </div>
+
+    <section id="landing-page">
+        <h1 class="hero-title">PrepMind AI</h1>
+        <p class="hero-subtitle">Intelligent, personalized preparation for any exam on Earth. Powered by Claude 3.5 Sonnet.</p>
+        <div class="input-group">
+            <input type="text" id="exam-input" placeholder="e.g. GATE Computer Science, SAT, UPSC...">
+            <button class="btn-main" onclick="startEngine()">Initialize AI</button>
+        </div>
+    </section>
+
+    <section id="loading-screen" class="hidden">
+        <h2 style="margin-bottom: 20px;">Analyzing Exam Parameters...</h2>
+        <div id="loader-steps">
+            <div class="loader-step">Scoping Syllabus...</div>
+            <div class="loader-step">Analyzing Previous Patterns...</div>
+            <div class="loader-step">Generating Study Strategy...</div>
+            <div class="loader-step">Ready.</div>
+        </div>
+    </section>
+
+    <section id="dashboard" class="hidden">
+        <nav>
+            <h2 style="color: var(--accent); margin-bottom: 20px;">PrepMind</h2>
+            <div class="nav-item active" onclick="switchTab('overview')">Overview</div>
+            <div class="nav-item" onclick="switchTab('practice')">Practice</div>
+            <div class="nav-item" onclick="switchTab('teach')">Teach Me</div>
+            <div class="nav-item" onclick="switchTab('ask')">Ask Doubt</div>
+            <div class="nav-item" onclick="switchTab('progress')">Progress</div>
+        </nav>
+
+        <main>
+            <div id="tab-overview" class="tab-content">
+                <h1 id="view-exam-name" style="margin-bottom: 10px;">Exam Name</h1>
+                <div class="card" id="exam-summary">Loading AI analysis...</div>
+                <h3>Syllabus Topics</h3>
+                <div id="topic-chips" style="margin-top: 15px;"></div>
+            </div>
+
+            <div id="tab-practice" class="tab-content hidden">
+                <h1>Practice Arena</h1>
+                <div style="display:flex; gap:10px; margin: 20px 0;">
+                    <select id="diff-select" style="background:var(--card); color:white; border:1px solid var(--border); padding:8px; border-radius:8px;">
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                    <button class="btn-main" onclick="generateQuestion()">Generate MCQ</button>
+                </div>
+                <div id="question-area" class="card">Select a topic and difficulty to start.</div>
+            </div>
+
+            <div id="tab-teach" class="tab-content hidden">
+                <h1>AI Tutor</h1>
+                <p style="color:var(--text-dim); margin-bottom:20px;">Select a topic to master the core concepts.</p>
+                <div id="teach-list"></div>
+            </div>
+
+            <div id="tab-ask" class="tab-content hidden">
+                <h1>Ask Doubt</h1>
+                <div class="chat-box" id="chat-display">
+                    <div class="msg ai">I am your dedicated AI tutor for this exam. How can I help you today?</div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="chat-input" placeholder="Explain the concept of...">
+                    <button class="btn-main" onclick="sendMessage()">Ask</button>
+                </div>
+            </div>
+
+            <div id="tab-progress" class="tab-content hidden">
+                <h1>Performance Tracking</h1>
+                <div class="card" style="display: flex; justify-content: space-around; text-align: center;">
+                    <div><h2 id="stat-score">0</h2><p>Questions Done</p></div>
+                    <div><h2 id="stat-acc">0%</h2><p>Accuracy</p></div>
+                </div>
+            </div>
+        </main>
+    </section>
+
+    <script>
+        let state = {
+            exam: "",
+            syllabus: [],
+            stats: { total: 0, correct: 0 },
+            chatHistory: []
+        };
+
+        const API_URL = "https://api.anthropic.com/v1/messages";
+
+        async function callClaude(prompt) {
+            const apiKey = document.getElementById('api-key').value;
+            if (!apiKey) {
+                alert("Please enter your Claude API Key at the top right.");
+                return null;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'content-type': 'application/json',
+                        'dangerously-allow-browser': 'true' // In some environments
+                    },
+                    body: JSON.stringify({
+                        model: "claude-3-5-sonnet-20240620",
+                        max_tokens: 1500,
+                        messages: [{ role: "user", content: prompt }]
+                    })
+                });
+                const data = await response.json();
+                return data.content[0].text;
+            } catch (e) {
+                console.error(e);
+                return "Error: Could not connect to API. Check CORS settings or Key.";
+            }
+        }
+
+        async function startEngine() {
+            const input = document.getElementById('exam-input').value;
+            if (!input) return;
+            state.exam = input;
+
+            // Transition to Loading
+            document.getElementById('landing-page').classList.add('hidden');
+            document.getElementById('loading-screen').classList.remove('hidden');
+            
+            const steps = document.querySelectorAll('.loader-step');
+            for(let i=0; i<steps.length; i++) {
+                steps[i].classList.add('active');
+                await new Promise(r => setTimeout(r, 800));
+            }
+
+            // Fetch Initial Data
+            const overview = await callClaude(`Provide a structured prep guide for ${state.exam}. 
+                Include: 1. Exam Pattern 2. Strategy 3. A list of 6-8 core syllabus topics. 
+                Format the syllabus topics clearly as a comma-separated list at the very end preceded by 'SYLLABUS:'`);
+
+            const syllabusPart = overview.split('SYLLABUS:')[1];
+            state.syllabus = syllabusPart ? syllabusPart.split(',').map(s => s.trim()) : ['General Aptitude', 'Subject Knowledge'];
+            
+            // Populate UI
+            document.getElementById('view-exam-name').innerText = state.exam;
+            document.getElementById('exam-summary').innerHTML = overview.split('SYLLABUS:')[0].replace(/\n/g, '<br>');
+            
+            const chipContainer = document.getElementById('topic-chips');
+            const teachContainer = document.getElementById('teach-list');
+            state.syllabus.forEach(topic => {
+                const chip = `<span class="chip" onclick="switchTab('practice')">${topic}</span>`;
+                chipContainer.innerHTML += chip;
+
+                const card = `<div class="card" style="cursor:pointer" onclick="teachTopic('${topic}', this)">
+                    <h3>${topic}</h3>
+                    <div class="content hidden" style="margin-top:15px; border-top:1px solid var(--border); padding-top:10px;">Loading...</div>
+                </div>`;
+                teachContainer.innerHTML += card;
+            });
+
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+            event.target.classList.add('active');
+        }
+
+        async function generateQuestion() {
+            const area = document.getElementById('question-area');
+            const diff = document.getElementById('diff-select').value;
+            area.innerHTML = "Generating question...";
+            
+            const prompt = `Generate ONE multiple choice question for ${state.exam} on any core topic. 
+                Difficulty: ${diff}. 
+                Provide: Question, 4 options (A, B, C, D), the Correct Letter, and a short 'Trick' explanation.
+                Format: JSON-like but plain text: [Q] question [A] opt1 [B] opt2 [C] opt3 [D] opt4 [ANS] Letter [TRICK] explanation`;
+            
+            const res = await callClaude(prompt);
+            
+            // Parsing logic (Simplified)
+            const q = res.split('[Q]')[1].split('[A]')[0];
+            const a = res.split('[A]')[1].split('[B]')[0];
+            const b = res.split('[B]')[1].split('[C]')[0];
+            const c = res.split('[C]')[1].split('[D]')[0];
+            const d = res.split('[D]')[1].split('[ANS]')[0];
+            const ans = res.split('[ANS]')[1].split('[TRICK]')[0].trim();
+            const trick = res.split('[TRICK]')[1];
+
+            area.innerHTML = `
+                <p><strong>Question:</strong> ${q}</p>
+                <div class="option" onclick="checkAns(this, 'A', '${ans}', '${trick}')">A) ${a}</div>
+                <div class="option" onclick="checkAns(this, 'B', '${ans}', '${trick}')">B) ${b}</div>
+                <div class="option" onclick="checkAns(this, 'C', '${ans}', '${trick}')">C) ${c}</div>
+                <div class="option" onclick="checkAns(this, 'D', '${ans}', '${trick}')">D) ${d}</div>
+                <div id="explanation" class="hidden" style="margin-top:20px; color:var(--accent)"></div>
+            `;
+        }
+
+        function checkAns(el, choice, correct, trick) {
+            state.stats.total++;
+            if(choice === correct) {
+                el.classList.add('correct');
+                state.stats.correct++;
+            } else {
+                el.classList.add('wrong');
+            }
+            document.getElementById('explanation').innerHTML = `<strong>Correct Answer: ${correct}</strong><br>AI Trick: ${trick}`;
+            document.getElementById('explanation').classList.remove('hidden');
+            updateStats();
+        }
+
+        async function teachTopic(topic, el) {
+            const contentDiv = el.querySelector('.content');
+            contentDiv.classList.remove('hidden');
+            if(contentDiv.innerHTML !== "Loading...") return;
+
+            const res = await callClaude(`Teach me the topic "${topic}" for the ${state.exam} exam. 
+                Focus on core formulas, 1 example, and 2 shortcut tricks. Keep it concise.`);
+            contentDiv.innerHTML = res.replace(/\n/g, '<br>');
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('chat-input');
+            const display = document.getElementById('chat-display');
+            if(!input.value) return;
+
+            const userMsg = input.value;
+            display.innerHTML += `<div class="msg user">${userMsg}</div>`;
+            input.value = "";
+
+            const res = await callClaude(`Context: Prep for ${state.exam}. User asks: ${userMsg}`);
+            display.innerHTML += `<div class="msg ai">${res}</div>`;
+            display.scrollTop = display.scrollHeight;
+        }
+
+        function updateStats() {
+            const acc = state.stats.total > 0 ? Math.round((state.stats.correct / state.stats.total) * 100) : 0;
+            document.getElementById('stat-score').innerText = state.stats.total;
+            document.getElementById('stat-acc').innerText = acc + "%";
+        }
+    </script>
+</body>
+                           </html>
+                           
